@@ -23,14 +23,20 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="class1.py">
+    <Compile Include="debug_strategy.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="Load_test.py" />
+    <Compile Include="utils.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="my_strategy.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="data_reader.py" />
     <Compile Include="backtest_main.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="config.py">
+    <Compile Include="configuration.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="custom_indicators.py">

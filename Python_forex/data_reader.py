@@ -4,9 +4,11 @@ import numpy as np
 import pandas as pd
 
 
-class load_forex_data(object):
-	def __init__(self, path):
-		self.data_folder = path
+class load_data(object):
+	def __init__(self, parameters):
+		self.config = parameters
+		self.data_folder = self.config['data_path']
+		self.mode = self.config['trading_mode']
 
 	def read_files(self, file_path):
 		read_file = pd.read_csv(file_path, header=None, index_col=0, parse_dates=True,  names=["Date", "Time", "Open", "High", "Low","Close","Volume"])
@@ -52,6 +54,36 @@ class load_forex_data(object):
 			metal_symbols[i] = j[:3] + '_' + j[3:6]
 
 		return metal_symbols, metal_data
+
+	def load_all_data(self):
+		
+		if self.mode == 'forex':
+			symbols, data_all = self.read_forex_files()
+			print('Done loading data')
+		else:
+			print('I can only do forex at the moment')
+		
+		return symbols, data_all
+
+	def load_symbol(self, all_data, all_symbols, target_symbol):
+		# QUESTION May need an index and not load the whole DF at the time of the trade.
+
+		found_symbol = False
+
+		for i, j in enumerate(all_symbols):
+			if target_symbol in j:
+				symbol_idx = i
+				found_symbol = True
+		
+		if not found_symbol:
+			print('Target symbol cannot be fount in data')
+			return
+		else:
+			print(f'Found symbol at index {symbol_idx}')
+
+		symbol_data = all_data[symbol_idx]
+
+		return symbol_data
 
 
 

@@ -1,7 +1,8 @@
 import backtrader as bt
 import numpy as np
-from config import parameters
+from configuration import parameters
 from money_management import forex_risk_calculator
+from ta.volatility import average_true_range
 
 class TestStrategy_SMA_Basic(bt.Strategy):
 	params = (
@@ -16,20 +17,27 @@ class TestStrategy_SMA_Basic(bt.Strategy):
 	def __init__(self):
 		# Keep a reference to the "close" line in the data[0] dataseries
 		self.dataclose = self.datas[0].close
+		self.dataopen = self.datas[0].open
+
+		
+		
+		#print(np.array(self.datas))
+		#print(np.array(self.dataclose))
 
 		# To keep track of pending orders and buy price/commission
 		self.order = None
 		self.buyprice = None
 		self.buycomm = None
 
+		print(len(self.dataclose))
 		self.config = parameters()
 		self.counter = 0
-
+		self.trade_mode = self.config['trading_mode']
 		# Add a MovingAverageSimple indicator
 		self.sma = bt.indicators.SimpleMovingAverage(
 			self.datas[0], period=self.params.maperiod)
 		
-		bt.indicators.ATR(self.datas[0], plot=True)
+		self.atr = bt.indicators.ATR(self.datas[0], period=14 ,plot=True)
 		bt.indicators.ExponentialMovingAverage(self.datas[0], period=25, plot=False)
 
 	def notify_order(self, order):
@@ -72,6 +80,7 @@ class TestStrategy_SMA_Basic(bt.Strategy):
 				 (trade.pnl, trade.pnlcomm))
 		self.log(f'cash in account {self.broker.getcash()}')
 		self.log(f'value of account {self.broker.getvalue()}')
+		
 		#cash = self.broker.getcash()
 		#value = self.broker.getvalue()
 
@@ -79,8 +88,7 @@ class TestStrategy_SMA_Basic(bt.Strategy):
 		# Simply log the closing price of the series from the reference
 		self.log('Close, %.4f' % self.dataclose[0])
 		
-		self.counter += 0
-
+		self.counter += 1
 		self.config['price'] = self.dataclose[0]
 		pair = self.config['target_symbol']
 
@@ -94,6 +102,15 @@ class TestStrategy_SMA_Basic(bt.Strategy):
 			# Not yet ... we MIGHT BUY if ...
 			if self.dataclose[0] > self.sma[0]:
 
+				self.config['order'] = 'buy' 
+				self.config['price'] = self.dataopen[0]
+				self.config['atr'] = self.atr[0] * 10**4
+				self.config['base_currency_price'] = self.dataopen[0]
+				trade_config = self.trade_params()
+				self.stop_loss = trade_config[3]
+				# base, target, order, price, base_price, risk, atr, balance
+				#pong = np.where(self.dataclose == self.dataclose[0])
+				#print(pong)
 				# BUY, BUY, BUY!!! (with all possible default parameters)
 				self.log('BUY CREATE, %.4f' % self.dataclose[0])
 
@@ -118,8 +135,8 @@ class TestStrategy_SMA_Basic(bt.Strategy):
 		balance = self.config['account_balance']
 		risk = self.config['risk_per_trade']
 
-		if self.mode == 'forex':
-			pair = config['target_symbol']
+		if self.trade_mode == 'forex':
+			pair = self.config['target_symbol']
 			counter_currency = pair[4:]
 			quote_currency = pair[:3]
 
@@ -135,7 +152,8 @@ class TestStrategy_SMA_Basic(bt.Strategy):
 			return
 		
 		atr = self.config['atr']
-
-		trade_specs = forex_risk_calculator(self, base, target, order, price, base_price, risk, atr, balance)
+		print(target, order, price, base_price, risk, atr, balance)
+		specs = forex_risk_calculator(base, target, order, price, base_price, risk, atr, balance)
+		trade_specs = specs.basic_calc()
 
 		return trade_specs

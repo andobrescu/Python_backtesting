@@ -4,7 +4,7 @@ from __future__ import (absolute_import, division, print_function,
 import argparse
 import os
 from backtest_main import backtesting
-from config import parameters
+from configuration import parameters
 
 if __name__ == '__main__':
     configuration = parameters()

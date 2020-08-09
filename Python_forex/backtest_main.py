@@ -8,21 +8,26 @@ import random
 import matplotlib.pyplot as plt
 import logging
 
-from Load_test import load_forex_data
+from data_reader import load_data
 from money_management import forex_risk_calculator
-from config import parameters
+from configuration import parameters
 from ta.volatility import average_true_range
 from backtest_strategy import Backtrader_Strategy
 from custom_strategy import TestStrategy_SMA_Basic
+from my_strategy import custom_strategy_example
 
 class backtesting(object):
-	def __init__(self, params):
+	def __init__(self, config):
 		print('Initiating backtesting')
-		self.params = params
-		self.data_path = params['data_path']
-		self.mode = params['trading_mode']
-		self.load_all_data()
-		self.symbol_data = self.load_symbol(params['target_symbol'])
+		self.config = config
+		self.data_path = config['data_path']
+		self.mode = config['trading_mode']
+		self.data_loader = load_data(self.config)
+		self.all_symbols, self.all_data = self.data_loader.load_all_data()
+		self.symbol_data = self.data_loader.load_symbol(self.all_data, self.all_symbols, config['target_symbol'])
+
+		self.config['base_target_symbol'] = self.config['account_base'] + '_' + self.config['target_symbol'][4:]
+		print(self.config['base_target_symbol'])
 
 		self.backdrading()
 
@@ -62,16 +67,16 @@ class backtesting(object):
 		return symbol_data
 
 
-	def trade_params(self, data, atr):
+	def trade_config(self, data, atr):
 
-		base = self.params['account_base']
-		target = self.params['target_symbol']
-		order = self.params['order']
-		balance = self.params['account_balance']
-		risk = self.params['risk_per_trade']
+		base = self.config['account_base']
+		target = self.config['target_symbol']
+		order = self.config['order']
+		balance = self.config['account_balance']
+		risk = self.config['risk_per_trade']
 
 		if self.mode == 'forex':
-			pair = params['target_symbol']
+			pair = config['target_symbol']
 			counter_currency = pair[4:]
 			quote_currency = pair[:3]
 
@@ -103,22 +108,23 @@ class backtesting(object):
 
 	def backdrading(self):
 		
-		#data = self.load_symbol(self.params['target_symbol'])
+		#data = self.load_symbol(self.config['target_symbol'])
 
 		# Create a cerebro entity
 		bro = bt.Cerebro()
 
 		# Add a strategy
-		bro.addstrategy(TestStrategy_SMA_Basic)
+		bro.addstrategy(custom_strategy_example)
 
 		# Add logging writer 
-		bro.addwriter(bt.WriterFile, out = self.params['output_path']+'results6.csv', csv = True)
+		random_number = str(np.random.randint(1000))
+		bro.addwriter(bt.WriterFile, out = self.config['output_path'] + 'results' + random_number + '.csv', csv = True)
 
 		#Sizer for now TODO remove and implement money management
-		bro.addsizer(bt.sizers.FixedSize, stake=3)
+		bro.addsizer(bt.sizers.PercentSizerInt, percents = 2)
 		
 		# Set our desired cash start
-		bro.broker.setcash(self.params['starting_balance'])
+		bro.broker.setcash(self.config['starting_balance'])
 
 		# transform the dataframe into a datafeed
 		data = bt.feeds.PandasData(dataname=self.symbol_data)
@@ -127,7 +133,7 @@ class backtesting(object):
 		bro.adddata(data)
 
 		# Set the commission
-		bro.broker.setcommission(commission= self.params['broker_commission'])
+		bro.broker.setcommission(commission= self.config['broker_commission'])
 		
 		# Print out the starting conditions
 		print(f'Starting Portfolio Value: {bro.broker.getvalue()}')
@@ -137,9 +143,6 @@ class backtesting(object):
 
 		print(f'Final Portfolio Value: {bro.broker.getvalue()}')
 
-		#bro.plot()
+		if self.config['plot'] == True:
+			bro.plot()
 
-#configuration  = parameters()
-#testing = backtesting(configuration)
-
-#print('done')
